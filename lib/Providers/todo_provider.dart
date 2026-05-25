@@ -1,38 +1,34 @@
-import 'package:flutter/material.dart';
 
-import '../Models/toto_model.dart';
+
+import 'package:flutter/material.dart';
+import 'package:todo_app/Models/toto_model.dart';
 
 class TodoProvider extends ChangeNotifier {
 
   final List<TodoModel> _todos = [];
-
   List<TodoModel> get todos => _todos;
 
-  // Add Todo
-  void addTodo(String title) {
+  // add Todo
 
-    if (title.trim().isEmpty) return;
-
-    _todos.add(
-      TodoModel(title: title),
+  void addTodo(String title){
+    if(title.trim().isEmpty) return;
+    _todos.add(TodoModel(title: title),
     );
-
     notifyListeners();
   }
+  
+  // delete Todo
 
-  // Delete Todo
-  void deleteTodo(int index) {
-
+  void deleteTodo(int index){
     _todos.removeAt(index);
 
     notifyListeners();
   }
 
-  // Toggle Complete
-  void toggleTodo(int index) {
+  // toggle Todo
 
-    _todos[index].isDone =
-    !_todos[index].isDone;
+  void toggleTodo(int index){
+    _todos[index].isDone = !_todos[index].isDone;
 
     notifyListeners();
   }

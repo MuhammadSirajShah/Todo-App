@@ -6,13 +6,14 @@ class TodoTile extends StatelessWidget {
   final VoidCallback onDelete;
   final VoidCallback onToggle;
 
-
   const TodoTile({
     super.key,
     required this.title,
     required this.isDone,
     required this.onDelete,
-    required this.onToggle,
+    required this.onToggle
+
+
   });
 
   @override
@@ -20,15 +21,17 @@ class TodoTile extends StatelessWidget {
     return Card(
       child: ListTile(
         leading: Checkbox(
-          value: isDone,
-
-          onChanged: (_){
-            onToggle();
-          },
-        ),
-        title: Text(title,style: TextStyle(decoration: isDone ? TextDecoration.lineThrough: null,
-        ),
-        ),
+            value: isDone,
+            onChanged: (_){
+              onToggle();
+            },
+            ),
+        title: Text(title,style: TextStyle(
+            decoration: isDone ? TextDecoration.lineThrough : null,
+            color: isDone
+                ? Colors.red
+                : Colors.black,
+            fontWeight: FontWeight.bold),),
         trailing: IconButton(onPressed: onDelete, icon: Icon(Icons.delete,color: Colors.red,)),
       ),
     );

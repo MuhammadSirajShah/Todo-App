@@ -1,5 +1,4 @@
 
-
 class TodoModel {
   String title;
   bool isDone;

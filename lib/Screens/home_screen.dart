@@ -9,11 +9,8 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
 
-    final provider = context.watch<TodoProvider>();
-
     final controller = TextEditingController();
-
-
+    final provider = context.watch<TodoProvider>();
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.blueGrey,
@@ -22,7 +19,7 @@ class HomeScreen extends StatelessWidget {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(16),
             child: Row(
               children: [
                 Expanded(
@@ -30,41 +27,42 @@ class HomeScreen extends StatelessWidget {
                     controller: controller,
                     decoration: InputDecoration(
                       hintText: "Enter Todo",
-                      border: OutlineInputBorder(),
+                      border: OutlineInputBorder()
                     ),
                   ),
                 ),
                 SizedBox(width: 10,),
-                ElevatedButton(onPressed: (){
+                ElevatedButton(onPressed: () {
                   context.read<TodoProvider>().addTodo(controller.text);
                   controller.clear();
-                }, child: Text("Add"),
-                ),
+                },
+                    child: Text("add",style: TextStyle(fontSize: 15,fontWeight: FontWeight.bold,color: Colors.blueGrey),))
               ],
             ),
           ),
           Expanded(
-            child: ListView.builder(
-                itemCount: provider.todos.length,
-                itemBuilder: (context,index){
-              final todo = provider.todos[index];
-              return TodoTile(
-                  title: todo.title,
-                  isDone: todo.isDone,
-
-                  onDelete: (){
-                    context
-                        .read<TodoProvider>()
-                        .deleteTodo(index);
-                  },
-                  onToggle: (){
-                    context
-                        .read<TodoProvider>()
-                        .toggleTodo(index);
-                  },
-                  );
-            }
+            child: provider.todos.isEmpty
+                ? Center(child: Text("No Todo Yet",style: TextStyle(fontSize: 22,fontWeight: FontWeight.bold,color: Colors.grey,
             ),
+            ),
+            )
+                : ListView.builder(
+                itemCount: provider.todos.length,
+                itemBuilder: (context , index){
+                  final todo = provider.todos[index];
+                  return TodoTile(
+                      title: todo.title,
+                      isDone: todo.isDone,
+                      onDelete: (){
+                        context.read<TodoProvider>().deleteTodo(index);
+                      },
+                      onToggle: (){
+                        context.read<TodoProvider>().toggleTodo(index);
+                      }
+
+
+                  );
+                })
           )
         ],
       ),
