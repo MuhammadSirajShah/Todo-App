@@ -6,7 +6,11 @@ import 'package:todo_app/Screens/home_screen.dart';
 void main() {
   runApp(
       ChangeNotifierProvider(
-        create: (_) => TodoProvider(),
+        create: (_) {
+          final provider = TodoProvider();
+          provider.loadTodos();
+          return provider;
+        },
         child: const MyApp(),
       ),
   );
