@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:todo_app/Models/toto_model.dart';
 
 class TodoTile extends StatelessWidget {
@@ -32,7 +33,7 @@ class TodoTile extends StatelessWidget {
         alignment: Alignment.centerRight,
         padding: EdgeInsets.only(right: 20),
         color: Colors.red,
-        child: Icon(Icons.delete,color: Colors.white,
+        child: Icon(Icons.delete,color: Theme.of(context).cardColor,
         ),
       ),
       child: AnimatedContainer(
@@ -43,7 +44,7 @@ class TodoTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: isDone
               ? Colors.green.shade100
-              : Colors.white,
+              : Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(15),
         ),
         child: ListTile(
@@ -57,9 +58,10 @@ class TodoTile extends StatelessWidget {
               decoration: isDone ? TextDecoration.none : null,
               color: isDone
                   ? Colors.red
-                  : Colors.black,
+                  : Theme.of(context).colorScheme.onSurface,
               fontWeight: FontWeight.bold),),
-          subtitle: Text("${createdAt.day}/${createdAt.month}/${createdAt.year}",style: TextStyle(color: Colors.grey,fontSize: 12),),
+          subtitle: Text(DateFormat('dd MMM yyyy . hh:mm a').format(createdAt),
+            style: TextStyle(color: Colors.grey,fontSize: 12),),
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
