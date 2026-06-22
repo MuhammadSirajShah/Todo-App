@@ -1,9 +1,15 @@
+import 'dart:math';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
+import 'package:todo_app/Models/toto_model.dart';
 import 'package:todo_app/Providers/theme_provider.dart';
 import 'package:todo_app/Providers/todo_provider.dart';
 import 'package:todo_app/Services/auth_service.dart';
+import 'package:todo_app/Services/firestore_service.dart';
 import 'package:todo_app/Widgets/filter_button.dart';
 import 'package:todo_app/Widgets/todo_tile.dart';
 
@@ -20,12 +26,45 @@ class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController controller = TextEditingController();
   final TextEditingController editController = TextEditingController();
 
+  DateTime? selectedDueDate;
+  bool isSearching = false;
+
   @override
   void dispose() {
     controller.dispose();
     editController.dispose();
     super.dispose();
   }
+
+  Future<void> pickDueDate() async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime(2100),
+    );
+
+    if (date == null) return;
+
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+    );
+
+    if (time == null) return;
+
+    setState(() {
+      selectedDueDate = DateTime(
+        date.year,
+        date.month,
+        date.day,
+        time.hour,
+        time.minute,
+      );
+    });
+  }
+
+
 
   Widget build(BuildContext context) {
     final provider = context.watch<TodoProvider>();
@@ -35,8 +74,19 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
-        // backgroundColor: Colors.blueGrey,
-        title: Center(child: Text("Todo App",
+        title: isSearching
+            ? TextField(
+                autofocus: true,
+                onChanged: (value){
+                  context.read<TodoProvider>().searchTodos(value);
+                },
+          decoration: InputDecoration(
+            hintText: "Search Todo",
+            border: InputBorder.none,
+
+          ),
+        )
+        : Center(child: Text("Todo App",
           style: TextStyle(
               fontSize: 22, fontWeight: FontWeight.bold, color: Theme
               .of(context)
@@ -45,25 +95,34 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         ),
         actions: [
-          Consumer<ThemeProvider>(builder: (context, themeProvider, child) {
-            return IconButton(onPressed: () {
+          if(!isSearching) ...[
+            IconButton(onPressed: (){
               themeProvider.toggleTheme();
             }, icon: Icon(
-              themeProvider.isDarkMode
-                  ? Icons.light_mode
-                  : Icons.dark_mode,
-              color: Theme
-                  .of(context)
-                  .appBarTheme
-                  .foregroundColor,
-
+                themeProvider.isDarkMode
+                    ? Icons.light_mode
+                    : Icons.dark_mode,
             ),
-            );
-          }
-          ),
+            ),
+            IconButton(onPressed: (){
+              setState(() {
+                isSearching = true;
+              });
+            }, icon: Icon(Icons.search),
+            ),
+          ] else ...[
+            IconButton(onPressed: (){
+              setState(() {
+                isSearching = false;
+              });
+              context.read<TodoProvider>().searchTodos("");
+            }, icon: Icon(Icons.close)
+            )
+          ],
           IconButton(onPressed: ()async{
             await AuthService().logout();
-          }, icon: Icon(Icons.logout))
+          }, icon: Icon(Icons.logout),
+          ),
         ],
       ),
       body: SafeArea(
@@ -80,6 +139,17 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           child: Column(
             children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    FilterButton(text: "All", filter: TodoFilter.all),
+                    FilterButton(text: "Completed", filter: TodoFilter.completed),
+                    FilterButton(text: "Pending", filter: TodoFilter.pending)
+                  ],
+                ),
+              ),
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Row(
@@ -106,14 +176,15 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     ),
-        
+                    IconButton(onPressed: pickDueDate, icon: Icon(Icons.calendar_month,),
+                    ),
                     SizedBox(width: 10,),
                     ElevatedButton(
-                        onPressed: () {
+                        onPressed: () async{
                           if (controller.text.trim().isEmpty) return;
-
                           final newTodo = controller.text;
-                          context.read<TodoProvider>().addTodo(newTodo);
+                          await FirestoreService().addTodo(newTodo,selectedDueDate);
+
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               behavior: SnackBarBehavior.floating,
@@ -124,9 +195,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                     SizedBox(width: 10,),
                                     Text("Todo Added Successfully"),
                                   ],
-                                ))
+                                )
+                            )
                           );
                           controller.clear();
+                          setState(() {
+                            selectedDueDate = null;
+                          });
                         },
                         child: Text("add", style: TextStyle(fontSize: 15,
                             fontWeight: FontWeight.bold,
@@ -137,213 +212,169 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Text("Total Todo: ${provider.todos.length}",
-                  style: TextStyle(
-                      fontSize: 20, fontWeight: FontWeight.bold, color: Theme
-                      .of(context)
-                      .colorScheme
-                      .onSurface),),
-              ),
-              SizedBox(height: 10,),
-        
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: TextField(
-                  onChanged: (value) {
-                    context.read<TodoProvider>().searchTodos(value);
-                  },
-                  decoration: InputDecoration(
-                      hintText: "Search Todo",
-                      prefixIcon: Icon(Icons.search),
-                      filled: true,
-                      fillColor: Theme
-                          .of(context)
-                          .cardColor,
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12)
-                      )
-                  ),
+              if (selectedDueDate != null)
+                Text("Due: ${selectedDueDate.toString()}",
+                  style: TextStyle(color: Colors.red,fontWeight: FontWeight.bold),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    FilterButton(text: "All", filter: TodoFilter.all),
-                    FilterButton(text: "Completed", filter: TodoFilter.completed),
-                    FilterButton(text: "Pending", filter: TodoFilter.pending)
-        
-                  ],
-        
-                ),
-              ),
-              SizedBox(height: 10,),
+              SizedBox(height: 5,),
               Expanded(
-                  child: AnimatedSwitcher(
-                    duration: Duration(milliseconds: 300),
-                    child: provider.todos.isEmpty
-                        ? (isKeyboardOpen
-                          ? SizedBox()
-                          : Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            SizedBox(
+                child: StreamBuilder<QuerySnapshot>(
+                    stream: FirestoreService().getTodos(),
+                    builder: (context , snapshot){
+                      if(snapshot.connectionState == ConnectionState.waiting){
+                        return Center(
+                          child: CircularProgressIndicator(),
+                        );
+                      }
+                      if(!snapshot.hasData || snapshot.data!.docs.isEmpty){
+                        return Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SizedBox(
                                 height: 160,
-                                child: Lottie.asset(
-                                    "assets/animations/empty.json")),
-                            SizedBox(height: 15,),
-                            Text("No Todo Yet",
-                              style: TextStyle(fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(context).colorScheme.onSurface,
+                                  child: Lottie.asset("assets/animations/empty.json")
                               ),
-                            ),
-                            Text(
-                              "Add your first task", style: TextStyle(fontSize: 16,
-                                color: Theme
-                                    .of(context)
-                                    .brightness == Brightness.dark
-                                    ? Colors.grey.shade400
-                                    : Colors.black54
-                            ),
-                            ),
-                          ],
-                        ),
-                    ))
-                        : ListView.builder(
-                        itemCount: provider.filteredTodos.length,
-                        itemBuilder: (context, index) {
-                          final todo = provider.filteredTodos[index];
-                          return TodoTile(
-                            title: todo.title,
-                            isDone: todo.isDone,
-                            createdAt: todo.createdAt,
-                            onDelete: () {
-                              context.read<TodoProvider>().deleteTodo(index);
+                              SizedBox(height: 15,),
+                              Text("No Todo Yet",style: TextStyle(fontSize: 22,fontWeight: FontWeight.bold
+                              ),
+                              )
+                            ],
+                          ),
+                        );
+                      }
+                      final todos = snapshot.data!.docs;
 
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    behavior: SnackBarBehavior.floating,
-                                    duration: Duration(seconds: 2),
-                                    content: Row(
-                                      children: [
-                                        Icon(Icons.delete,color: Colors.red,),
-                                        SizedBox(width: 10,),
-                                        Text("Todo deleted")
-                                      ],
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12)
-                                    ),
+                      final filteredTodos = todos.where((todo){
+                        final title = todo["title"].toString().toLowerCase();
 
-                                  )
-                              );
-                            },
-                            onToggle: () {
-                              context.read<TodoProvider>().toggleTodo(index);
+                        final matchesSearch = title.contains(
+                          provider.searchQuery.toLowerCase(),
+                        );
 
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                        todo.isDone
-                                            ? "Todo Marked Pending"
-                                            : "Todo Completed"
-                                    ),
-                                    behavior: SnackBarBehavior.floating,
-                                    duration: Duration(seconds: 2),
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12)
-                                    ),
+                        bool matchesFilter = true;
 
-                                  )
-                              );
-                            },
-                            onEdit: () {
-                              final editController = TextEditingController(
-                                text: todo.title,
-                              );
+                        switch (provider.currentFilter){
+                          case TodoFilter.completed:
+                            matchesFilter = todo["isDone"] == true;
+                            break;
 
-                              showDialog(
-                                  context: context,
-                                  builder: (context) {
-                                    return AlertDialog(
-                                      title: Text("Edit Todo", style: TextStyle(
-                                          fontWeight: FontWeight.bold),),
-                                      content: TextField(
-                                        controller: editController,
-                                        decoration: InputDecoration(
-                                          filled: true,
-                                          fillColor: Theme
-                                              .of(context)
-                                              .cardColor,
-                                          border: OutlineInputBorder(
-                                              borderRadius: BorderRadius.circular(
-                                                  20),
-                                              borderSide: BorderSide(
-                                                  color: Theme
-                                                      .of(context)
-                                                      .brightness == Brightness.dark
-                                                      ? Colors.grey.shade400
-                                                      : Colors.black54
-                                              )
-                                          ),
-                                        ),
-                                      ),
-                                      actions: [
-                                        TextButton(onPressed: () {
-                                          Navigator.pop(context);
-                                        },
-                                          child: Text("Cancel", style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              color: Theme
-                                                  .of(context)
-                                                  .colorScheme
-                                                  .onSurface),),
-                                        ),
-                                        ElevatedButton(onPressed: () {
-                                          context.read<TodoProvider>().editTodo(
-                                            index, editController.text,);
-                                          Navigator.pop(context);
-                                          ScaffoldMessenger
-                                              .of(context)
-                                              .showSnackBar(
-                                              SnackBar(
-                                                //content: Text("Todo Updated"),
-                                                behavior: SnackBarBehavior.floating,
-                                                duration: Duration(seconds: 2),
-                                                content: Row(
-                                                  children: [
-                                                    Icon(Icons.update,color: Colors.green,),
-                                                    SizedBox(width: 10,),
-                                                    Text("Todo Updated")
-                                                  ],
-                                                ),
-                                                shape: RoundedRectangleBorder(
-                                                    borderRadius: BorderRadius
-                                                        .circular(12)
-                                                ),
+                          case TodoFilter.pending:
+                            matchesFilter = todo["isDone"] == false;
+                            break;
 
-                                              )
-                                          );
-                                        },
-                                            child: Text("Save", style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                color: Theme
-                                                    .of(context)
-                                                    .colorScheme
-                                                    .onSurface),))
-                                      ],
+                          case TodoFilter.all:
+                            matchesFilter = true;
+                            break;
+                        }
+
+                        return matchesSearch && matchesFilter;
+                      }).toList();
+
+                      return Column(
+                        children: [
+                      Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Text("Total Todo: ${filteredTodos.length}",
+                      style: TextStyle(
+                      fontSize: 20, fontWeight: FontWeight.bold, color: Theme
+                          .of(context)
+                          .colorScheme
+                          .onSurface
+                      ),
+                      ),
+                      ),
+                          Expanded(
+                            child: ListView.builder(
+                              itemCount: filteredTodos.length,
+                              itemBuilder: (context , index){
+                                final todo = filteredTodos[index];
+
+                                return TodoTile(
+                                  title: todo["title"],
+                                  isDone: todo["isDone"],
+                                  isFavorite: todo["isFavorite"] ?? false,
+                                  createdAt: todo["createdAt"] is Timestamp
+                                      ? (todo["createdAt"] as Timestamp).toDate()
+                                      : DateTime.parse(todo["createdAt"]),
+
+                                  dueDate: todo["dueDate"] == null
+                                      ? null
+                                      : (todo["dueTodo"] as Timestamp).toDate(),
+
+
+                                  onDelete: () async{
+                                    final deletedTodo = TodoModel(
+                                        title: todo["title"],
+                                        isDone: todo["isDone"],
+                                        createdAt: todo["createdAt"] is Timestamp
+                                            ? (todo["createdAt"] as Timestamp).toDate()
+                                            : DateTime.parse(todo["createdAt"]),
                                     );
-                                  }
-                              );
-                            },
-                          );
-                        }),
-                  )
+                                    await FirestoreService().deleteTodo(todo.id);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                          content: Text("Todo Deleted"),
+                                          duration: Duration(seconds: 5),
+                                          action: SnackBarAction(
+                                              label: "UNDO",
+                                              onPressed: () async {
+                                                await FirestoreService().restoreTodo(deletedTodo);
+                                              }
+                                              ),
+                                      )
+                                    );
+                                  },
+                                  onToggle: ()async{
+                                    await FirestoreService().toggleTodo(todo.id, todo["isDone"],
+                                    );
+                                  },
+                                  onFavorite: () async {
+                                    await FirestoreService().toggleFavorite(todo.id, todo["isFavorite"] ?? false);
+                                  },
+
+                                  onEdit: (){
+                                    final editController = TextEditingController(text: todo["title"],
+                                    );
+                                    showDialog(
+                                        context: context,
+                                        builder: (context) {
+                                          return AlertDialog(
+                                            title: Text("Edit Todo"),
+                                            content: TextField(
+                                              controller: editController,
+                                            ),
+                                            actions: [
+                                              TextButton(onPressed: (){
+                                                Navigator.pop(context);
+                                              }, child: Text("Cancel")
+                                              ),
+                                              ElevatedButton(onPressed: ()async{
+                                                await FirestoreService().editTodo(todo.id, editController.text);
+                                                Navigator.pop(context);
+                                              }, child: Text("Save"))
+                                            ],
+                                          );
+                                        });
+                                  },
+                                )
+                                    .animate()
+                                    .fade(
+                                  duration: 400.ms,
+                                )
+                                    .slideY(
+                                  begin: -0.25,
+                                  end: 0,
+                                  duration: 400.ms,
+                                  curve: Curves.easeOut,
+                                );
+
+                              },
+                            ),
+                          )
+                        ],
+                      );
+                    }),
               )
             ],
           ),

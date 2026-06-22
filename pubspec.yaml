@@ -41,6 +41,10 @@ dependencies:
   firebase_core: ^4.10.0
   firebase_auth: ^6.5.2
   cloud_firestore: ^6.5.0
+  flutter_animate: ^4.5.2
+  implicitly_animated_reorderable_list_2: ^0.6.0
+  flutter_local_notifications: ^22.0.1
+  timezone: ^0.11.0
 
 dev_dependencies:
   flutter_test:

@@ -22,11 +22,17 @@ class FilterButton extends StatelessWidget {
           backgroundColor:
             provider.currentFilter == filter
               ? Colors.blue
-              : Colors.grey
+              : Colors.grey,
         ),
         onPressed: (){
           context.read<TodoProvider>().changeFilter(filter);
 
-    }, child: Text(text));
+    }, child: Text(text,style: TextStyle(
+        fontWeight: FontWeight.bold,
+      color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white
+              : Colors.black
+
+    ),));
   }
 }

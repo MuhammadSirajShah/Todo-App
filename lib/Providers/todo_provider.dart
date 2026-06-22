@@ -58,20 +58,20 @@ class TodoProvider extends ChangeNotifier {
     await prefs.setStringList('todos', todoList);
   }
 
-  Future<void> loadTodos() async {
-    final prefs = await SharedPreferences.getInstance();
-
-    List<String>? todoList = prefs.getStringList('todos');
-    if(todoList != null){
-      _todos.clear();
-      _todos.addAll(
-        todoList.map((todo) => TodoModel.fromJson(jsonDecode(todo),
-        )
-        )
-      );
-    }
-    notifyListeners();
-  }
+  // Future<void> loadTodos() async {
+  //   final prefs = await SharedPreferences.getInstance();
+  //
+  //   List<String>? todoList = prefs.getStringList('todos');
+  //   if(todoList != null){
+  //     _todos.clear();
+  //     _todos.addAll(
+  //       todoList.map((todo) => TodoModel.fromJson(jsonDecode(todo) as Map<String , dynamic>
+  //       )
+  //     ),
+  //     );
+  //   }
+  //   notifyListeners();
+  // }
 
   void editTodo(int index, String newTitle){
     if(newTitle.trim().isEmpty) return;
@@ -82,11 +82,24 @@ class TodoProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+
+  //
+  // String _searchQuery = "";
+  //
+  // void searchTodos(String query){
+  //   _searchQuery = query;
+  //
+  //   notifyListeners();
+  // }
+
+
+
   String _searchQuery = "";
 
-  void searchTodos(String query){
-    _searchQuery = query;
+  String get searchQuery => _searchQuery;
 
+  void searchTodos(String query) {
+    _searchQuery = query;
     notifyListeners();
   }
 
@@ -94,13 +107,16 @@ class TodoProvider extends ChangeNotifier {
 
   List<TodoModel> get filteredTodos{
     List<TodoModel> result = _todos;
-    if(_searchQuery.isEmpty){
+    if(_searchQuery.isNotEmpty){
       result = result.where((todo){
         return todo.title.toLowerCase().contains(
           _searchQuery.toLowerCase(),
         );
       }).toList();
       }
+
+
+
       // Status Filter
       switch (_currentFilter){
         case TodoFilter.completed:
@@ -123,6 +139,12 @@ class TodoProvider extends ChangeNotifier {
 
   void changeFilter(TodoFilter filter){
     _currentFilter = filter;
+    notifyListeners();
+  }
+
+  void insertTodo(int index, TodoModel todo){
+    _todos.insert(index, todo);
+    saveTodos();
     notifyListeners();
   }
 }
