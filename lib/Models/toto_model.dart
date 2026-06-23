@@ -44,8 +44,8 @@ class TodoModel {
         isFavorite: json['isFavorite'] ?? false,
         createdAt: DateTime.parse(json['createdAt']),
         dueDate: json['dueDate'] != null
-            ? DateTime.parse(json["dueDate"])
-            : null,
+            ? null
+            : DateTime.parse(json["dueDate"]),
 
     );
   }

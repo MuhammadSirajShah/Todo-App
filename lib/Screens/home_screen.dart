@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:intl/intl.dart';
 import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
 import 'package:todo_app/Models/toto_model.dart';
@@ -10,6 +11,7 @@ import 'package:todo_app/Providers/theme_provider.dart';
 import 'package:todo_app/Providers/todo_provider.dart';
 import 'package:todo_app/Services/auth_service.dart';
 import 'package:todo_app/Services/firestore_service.dart';
+import 'package:todo_app/Services/notification_service.dart';
 import 'package:todo_app/Widgets/filter_button.dart';
 import 'package:todo_app/Widgets/todo_tile.dart';
 
@@ -182,8 +184,31 @@ class _HomeScreenState extends State<HomeScreen> {
                     ElevatedButton(
                         onPressed: () async{
                           if (controller.text.trim().isEmpty) return;
+                          if(selectedDueDate == null){
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                  content: Text("Please select Due Date & Time")
+                              )
+                            );
+                            return;
+                          }
+
+                          if(selectedDueDate!.isBefore(DateTime.now())){
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                  content: Text("Please select a future time")
+                              ),
+                            );
+                            return ;
+                          }
                           final newTodo = controller.text;
                           await FirestoreService().addTodo(newTodo,selectedDueDate);
+                          await NotificationService.instance.scheduleNotification(
+                              id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+                              title: '📌 $newTodo',
+                              body: "It's time to complete your task.",
+                              scheduledDate: selectedDueDate!,
+                          );
 
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
@@ -213,7 +238,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               if (selectedDueDate != null)
-                Text("Due: ${selectedDueDate.toString()}",
+                Text("Due: ${DateFormat('dd MMM yyyy • hh:mm a').format(selectedDueDate!)}",
                   style: TextStyle(color: Colors.red,fontWeight: FontWeight.bold),
                 ),
               SizedBox(height: 5,),
@@ -300,7 +325,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                                   dueDate: todo["dueDate"] == null
                                       ? null
-                                      : (todo["dueTodo"] as Timestamp).toDate(),
+                                      : (todo["dueDate"] as Timestamp).toDate(),
 
 
                                   onDelete: () async{
@@ -310,6 +335,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                         createdAt: todo["createdAt"] is Timestamp
                                             ? (todo["createdAt"] as Timestamp).toDate()
                                             : DateTime.parse(todo["createdAt"]),
+                                        dueDate: todo["dueDate"] == null
+                                            ? null
+                                            : (todo["dueDate"] as Timestamp).toDate(),
                                     );
                                     await FirestoreService().deleteTodo(todo.id);
                                     ScaffoldMessenger.of(context).showSnackBar(

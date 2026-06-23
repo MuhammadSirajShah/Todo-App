@@ -7,6 +7,7 @@ import 'package:todo_app/Screens/auth_wrapper.dart';
 import 'package:todo_app/Screens/home_screen.dart';
 import 'package:todo_app/Screens/login_screen.dart';
 import 'package:todo_app/Screens/signup_screen.dart';
+import 'package:todo_app/Services/notification_service.dart';
 import 'package:todo_app/firebase_options.dart';
 
 void main() async {
@@ -15,6 +16,7 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  await NotificationService.instance.init();
   runApp(const MyApp());
 }
 
